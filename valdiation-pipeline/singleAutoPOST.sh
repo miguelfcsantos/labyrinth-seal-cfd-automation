@@ -88,7 +88,7 @@ DONE_DIR="/localdata1/corr_mi/OI/TEST/merge_done"
 echo ""
 echo "[4/6] Running saca.py..."
 python3 /home/corr_mi/saca2.py "$DONE_DIR/$SIM_NAME"
-python3 /home/corr_mi/bigcalc.py
+python3 /home/corr_mi/bulk_calc.py
 
 # ── 5. Upload post-processed sim to HPC ────────────────────────────────────
 # set -e means: if this scp fails, the script stops right here and the
