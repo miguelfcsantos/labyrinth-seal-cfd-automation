@@ -85,9 +85,11 @@ import matplotlib.pyplot as plt
 
 
 # --- paths ------------------------------------------------------------------
+# Directory containing the values_*.yml result files, and where outputs go.
+# Adjust these to your own setup (relative or absolute paths both work).
 
-VALUES_DIR = Path("/localdata1/corr_mi/VALUES/fins")
-OUT_DIR = Path("/localdata1/corr_mi/VALUES/fins/eq23_results")
+VALUES_DIR = Path("./data/fins")
+OUT_DIR = VALUES_DIR / "eq23_results"
 OUT_DIR.mkdir(exist_ok=True, parents=True)
 
 # --- case / geometry definitions ---------------------------------------------
