@@ -71,7 +71,7 @@ Six steps per sim:
 
 Two independent scripts consume the post-processed data:
 
-### `bigcalc.py` — performance coefficients
+### `bulk_calc.py` — performance coefficients
 For every finished sim, reads the converged (last-row) inlet/outlet residual values and computes standard labyrinth-seal metrics:
 
 - **π** — pressure ratio
@@ -98,6 +98,6 @@ Existing plots are skipped unless `--force` is passed, so re-runs are cheap.
 1. **Build** — one case manually, or a whole sweep automatically (`run_study.sh`) varying inlet angle, turbulence, and/or SST model settings.
 2. **Submit** — every case is uploaded and `sbatch`'d to the `cara` HPC cluster.
 3. **Post-process** (`autoPost.sh`, single sim or batch) — generate residual diagnostics, build the analysis grid, merge/post-process CGNS output, and extract normalized velocity profiles.
-4. **Analyze & plot** — compute discharge/swirl/temperature-rise coefficients (`bigcalc.py`) and generate velocity-profile comparison plots against experimental data (`plot_velocity_profiles.py`).
+4. **Analyze & plot** — compute discharge/swirl/temperature-rise coefficients (`bulk_calc.py`) and generate velocity-profile comparison plots against experimental data (`plot_velocity_profiles.py`).
 
 The whole chain turns a set of YAML parameters into submitted CFD jobs, and turns finished CFD jobs into thesis-ready numbers and figures — with the sweep launcher letting many parameter combinations run through the exact same pipeline unattended.
