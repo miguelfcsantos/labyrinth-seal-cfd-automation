@@ -1,187 +1,193 @@
-#!/usr/bin/env bash
-# =============================================================================
-#  Parametric study launcher — Fin Count x Step Profile sweep, single Wilcox journal
-#
-#  Hardcoded step-height profiles (label + constant step height value):
-#    FS   =  0.000   (smooth)
-#    FC   = -0.002   (convergent)
-#    FD   =  0.002   (divergent)
-#    FCH  = -0.001   (convergent, half)
-#    FDH  =  0.001   (divergent, half)
-#
-#  For each profile, sweeps number_of_fins from 1 to 9. For each fin count N:
-#    - number_of_fins  = N
-#    - number_of_steps = N - 1   (step_height array has N-1 entries)
-#    - every entry in step_height is set to the profile's constant value
-#
-#  Total runs: 5 profiles x 9 fin counts = 45 simulations, one script invocation.
-#
-#  sim_name = <PROFILE_LABEL>_F<N>   e.g. FC_F4, FDH_F7, FS_F1 ...
-#
-#  For each (profile, fin count) entry:
-#    1. Patch number_of_fins + step_height in geometry.yml
-#    2. Generate base geometry  →  BASE_DIR/{sim_name}/
-#    3. Prep geometry (split/merge)
-#    4. Apply model journal via gmcPlay
-#    5. Write sim_config.yml
-#    6. Upload to HPC
-#    7. Submit sbatch job
-# =============================================================================
+import math
+import re
+import os
+import itertools
 
-# ── Environment ───────────────────────────────────────────────────────────────
-module load trace_dependencies/gcc-11.4.0-trace-9.7.5-1
-module load gmc/9.6.13
-module load pymesh/2.0.1-numpy
-module load tecplot
-module load trace_suite/9.8.0-double
+# ============================================================
+#  CONFIG
+# ============================================================
 
-# ── Paths ─────────────────────────────────────────────────────────────────────
-BASE_DIR="/home/corr_mi/Projects/MM/testGEO"
-HPC_SCRATCH="/scratch/ws25/corr_mi-den_mig/sims"
-HPC_HOST="cara.dlr.de"
-SBATCH_SCRIPT="/scratch/ws25/corr_mi-RestoredMig/corr_mi-workmig-1779156012/tracestart_OG.sh"
-TRACE_INPUT_SRC_0="/localdata1/corr_mi/mod_files/X_offset_0/CORR_PRESSURE/TRACE_entry.input"
-INPUT_JOU_0="/localdata1/corr_mi/mod_files/X_offset_0/CORR_PRESSURE/TRACE_input.jou"
-PARAM_YML="/localdata1/testcases/staggered-labyrinth-seal_new/examples/Denecke_cavity/parameter.yml"
-GEO_YML="/localdata1/testcases/staggered-labyrinth-seal_new/examples/Denecke_cavity/geometry.yml"
+MERGE_DONE_DIR = "/path/to/simulations/merge_done"
+OUTPUT_FILE    = "/path/to/results/ratio_verification.txt"
 
-# ── Hardcoded step-height profiles: "LABEL STEP_HEIGHT_VALUE" ────────────────
-declare -a STEP_PROFILES=(
-    "sFS   0.000"    # smooth
-    "sFC  -0.002"    # convergent
-    "sFD   0.002"    # divergent
-    "sFCH -0.001"    # convergent, half
-    "sFDH  0.001"    # divergent, half
-)
+SIM_TYPES  = ["FR", "FS", "FH"]
+VARIANTS   = ["Sch", "Off"]
+FIN_RANGE  = range(2, 7)   # 2, 3, 4, 5, 6
+AVG_TYPES  = ["flux", "mass", "area"]
 
-# ── Fin count range: 1 to 9 fins (9 simulations per profile) ─────────────────
-FIN_COUNTS=(1 2 3 4 5 6 7 8 9)
+KAPPA  = 1.4
+R_GAS  = 287.0
 
-# ── Helper: build a step_height array literal with N entries, all = value ────
-# N = 0  → "[]"   (1 fin → 0 steps)
-build_step_height_array() {
-    local count="$1"
-    local val="$2"
+# ============================================================
+#  READERS  (unchanged from original)
+# ============================================================
 
-    if (( count <= 0 )); then
-        echo "[]"
+def parse_d0_zones(filepath, zones):
+    with open(filepath) as f:
+        lines = f.readlines()
+
+    SKIP_START = ('DATASETAUXDATA', 'AUXDATA', 'TITLE', 'DT',
+                  'ZONETYPE', 'STRANDID', 'SOLUTIONTIME', 'VARLOCATION')
+
+    results  = []
+    cur_name = None
+    cur_data = {}
+    cur_key  = None
+
+    for line in lines:
+        s = line.strip()
+        if not s:
+            continue
+
+        m = re.match(r'ZONE\s+T\s*=\s*"([^"]*)"', s, re.IGNORECASE)
+        if m:
+            if cur_name is not None:
+                results.append((cur_name, cur_data))
+            cur_name = m.group(1).lower()
+            cur_data = {}
+            cur_key  = None
+            continue
+
+        if any(s.upper().startswith(k) for k in SKIP_START):
+            cur_key = None
+            continue
+        if re.match(r'VARIABLES\s*=', s, re.IGNORECASE):
+            cur_key = None
+            continue
+
+        if s.startswith('###'):
+            cur_key = s[3:].strip()
+            continue
+
+        if cur_key is not None:
+            try:
+                cur_data[cur_key] = float(s.split()[0])
+            except (ValueError, IndexError):
+                pass
+            cur_key = None
+
+    if cur_name is not None:
+        results.append((cur_name, cur_data))
+
+    lookup = {name: d for name, d in results}
+    out = []
+    for z in zones:
+        key = z.lower()
+        if key not in lookup:
+            avail = [n for n, _ in results]
+            raise KeyError(f"Zone '{z}' not found in {filepath}. Available: {avail}")
+        out.append(lookup[key])
+    return out
+
+
+def get_mdot(sim_name, avg_type):
+    """
+    Return raw mdot (abs) from the outlet zone of the primitives file.
+    Returns None if file is missing or parse fails.
+    """
+    base   = os.path.join(MERGE_DONE_DIR, sim_name)
+    f_prim = os.path.join(base, "output", "output", "POST",
+                          f"d0_primitives_{avg_type}.dat")
+    if not os.path.isfile(f_prim):
+        return None
+    try:
+        _, z_out = parse_d0_zones(f_prim, zones=["inlet", "outlet"])
+        return abs(z_out['MassFlow'])
+    except Exception as e:
+        print(f"  [WARN] {sim_name} / {avg_type}: {e}")
+        return None
+
+
+# ============================================================
+#  RATIO VERIFICATION
+# ============================================================
+
+def predicted_ratio(z1, z2):
+    """Formula: mdot_z2 / mdot_z1 = sqrt(z1 / z2)"""
+    return math.sqrt(z1 / z2)
+
+
+DIVIDER  = "#" + "=" * 65
+DIVIDER2 = "#" + "-" * 65
+
+
+def verify_group(sim_type, variant, avg_type, lines_out):
+    """
+    For one (sim_type, variant, avg_type) triple, collect all available
+    fin counts, then compare every consecutive pair AND every possible pair.
+    Appends formatted lines to lines_out.
+    """
+    # Collect mdot for each available fin count
+    data = {}   # fin_count -> mdot
+    for z in FIN_RANGE:
+        sim_name = f"{sim_type}{z}_{variant}_"
+        mdot = get_mdot(sim_name, avg_type)
+        if mdot is not None:
+            data[z] = mdot
+        else:
+            print(f"  [SKIP] {sim_name} / avg={avg_type} — not available")
+
+    if len(data) < 2:
+        lines_out.append(f"#  Not enough data for {sim_type}_{variant} / {avg_type}\n")
         return
-    fi
 
-    local arr=()
-    local i
-    for (( i = 0; i < count; i++ )); do
-        arr+=("${val}")
-    done
+    fin_counts = sorted(data.keys())
 
-    local joined
-    joined=$(IFS=,; echo "${arr[*]}")
-    echo "[${joined}]"
-}
+    header = (f"\n{DIVIDER}\n"
+              f"#  Type: {sim_type}   Variant: {variant}   Avg: {avg_type.upper()}\n"
+              f"{DIVIDER}\n")
+    lines_out.append(header)
 
-# ── Helper: patch number_of_fins + step_height in geometry.yml ───────────────
-patch_geometry() {
-    local yml="$1"
-    local nfins="$2"
-    local step_arr="$3"
+    # Table header
+    col = f"  {'z1':>3}  {'z2':>3}  {'mdot_z1':>12}  {'mdot_z2':>12}  "
+    col += f"{'actual_ratio':>13}  {'pred_ratio':>11}  {'Δratio':>9}  {'error_%':>9}\n"
+    lines_out.append(col)
+    lines_out.append(f"  {'-'*95}\n")
 
-    # number_of_fins: <int>
-    sed -i "s/^\(\s*number_of_fins:\s*\)[0-9]*/\1${nfins}/" "${yml}"
+    # All pairwise combinations (z1 < z2, so z2 has MORE fins → smaller mdot)
+    for z1, z2 in itertools.combinations(fin_counts, 2):
+        mdot1  = data[z1]
+        mdot2  = data[z2]
+        actual = mdot2 / mdot1          # should be < 1 since more fins = less leakage
+        pred   = predicted_ratio(z1, z2)
+        delta  = actual - pred
+        err_pct = (delta / pred) * 100.0
 
-    # step_height: [ ... ]   (replace whatever array is currently there)
-    sed -i "s|^\(\s*step_height:\s*\)\[[^]]*\]|\1${step_arr}|" "${yml}"
-}
+        row = (f"  {z1:>3}  {z2:>3}  {mdot1:>12.6e}  {mdot2:>12.6e}  "
+               f"{actual:>13.6f}  {pred:>11.6f}  {delta:>+9.6f}  {err_pct:>+9.3f}%\n")
+        lines_out.append(row)
 
-# ── Helper: write sim_config.yml ──────────────────────────────────────────────
-write_sim_config() {
-    local dir="$1"
-    local sim_name="$2"
-    local nfins="$3"
-    local nsteps="$4"
-    local step_val="$5"
+    lines_out.append("\n")
 
-    cat > "${dir}/sim_config.yml" <<EOF
-# sim_config.yml — auto-generated by run_study.sh
-# ----------------------------------------------------
-sim_name:           ${sim_name}
-number_of_fins:     ${nfins}
-number_of_steps:    ${nsteps}
-step_height_value:  ${step_val}
-turbulence_model:   Wilcox
-EOF
-}
 
-# =============================================================================
-#  MAIN LOOP  —  5 profiles x 9 fin counts = 45 simulations
-# =============================================================================
-total_submitted=0
+# ============================================================
+#  MAIN
+# ============================================================
 
-for profile in "${STEP_PROFILES[@]}"; do
-    read -r profile_label step_val <<< "${profile}"
+all_lines = []
+all_lines.append(f"{DIVIDER}\n")
+all_lines.append(f"#  LABYRINTH SEAL MASS-FLOW RATIO VERIFICATION\n")
+all_lines.append(f"#  Formula: mdot(z2) / mdot(z1) = sqrt(z1 / z2)\n")
+all_lines.append(f"#  z1 < z2  =>  ratio < 1  (more fins, less leakage)\n")
+all_lines.append(f"{DIVIDER}\n")
 
-for n_fins in "${FIN_COUNTS[@]}"; do
+for sim_type in SIM_TYPES:
+    all_lines.append(f"\n\n{'#'*67}\n")
+    all_lines.append(f"##  SIM TYPE: {sim_type}\n")
+    all_lines.append(f"{'#'*67}\n")
 
-    sim_name="${profile_label}_F${n_fins}"
-    n_steps=$(( n_fins - 1 ))
-    step_arr=$(build_step_height_array "${n_steps}" "${step_val}")
+    for variant in VARIANTS:
+        all_lines.append(f"\n{'#'*67}\n")
+        all_lines.append(f"##  Variant: {variant}\n")
+        all_lines.append(f"{'#'*67}\n")
 
-    base_dir="${BASE_DIR}/${sim_name}"
+        for avg_type in AVG_TYPES:
+            verify_group(sim_type, variant, avg_type, all_lines)
 
-    echo "======================================================================"
-    echo "  Sim: ${sim_name}   profile=${profile_label}  fins=${n_fins}  steps=${n_steps}  step_height=${step_val}"
-    echo "======================================================================"
+os.makedirs(os.path.dirname(OUTPUT_FILE), exist_ok=True)
+with open(OUTPUT_FILE, "w") as f:
+    f.writelines(all_lines)
 
-    # ── 1. Patch geometry.yml ───────────────────────────────────────────────
-    echo "  Patching number_of_fins=${n_fins}, step_height=${step_arr} in ${GEO_YML}"
-    patch_geometry "${GEO_YML}" "${n_fins}" "${step_arr}"
-
-    # ── 2. Generate base geometry ──────────────────────────────────────────
-    echo "  Generating base geometry → ${base_dir}"
-
-    cd /localdata1/testcases/staggered-labyrinth-seal_new/lab_altered_py
-
-    module load pymesh/2.0.1-numpy
-    PyMesh.x main.py \
-        -p "${PARAM_YML}" \
-        -g "${GEO_YML}" \
-        -c "${base_dir}"
-    module unload pymesh/2.0.1-numpy
-    module load trace_suite/9.8.0-double
-
-    cd "${base_dir}/input"
-
-    #ENTRYINPUT
-    cp "${TRACE_INPUT_SRC_0}" "${BASE_DIR}/${sim_name}/input/TRACE_entry.input"
-    gmcPlay "${INPUT_JOU_0}"
-
-    # ── 3. Prep geometry (split/merge) ─────────────────────────────────────
-    prep.py -clb -cgns TRACE.cgns -np 128 -sb TRACE_split.cgns splitScript.jou mergeScript.jou
-    gmcPlay splitScript.jou
-
-    cp "${PARAM_YML}" "${base_dir}/parameters_used.yml"
-    cp "${GEO_YML}"   "${base_dir}/geometry_used.yml"
-
-    # ── 4. Apply the model journal ──────────────────────────────────────────
-    gmcPlay /home/corr_mi/Projects/MM/models/OmegaSST_Off_Bardina.jou
-
-    # ── 5. Write sim_config.yml ──────────────────────────────────────────────
-    write_sim_config "${base_dir}" "${sim_name}" "${n_fins}" "${n_steps}" "${step_val}"
-
-    # ── 6. Upload to HPC ──────────────────────────────────────────────────────
-    echo "  Uploading ${sim_name} → ${HPC_HOST}:${HPC_SCRATCH}"
-    scp -r "${base_dir}" "${HPC_HOST}:${HPC_SCRATCH}"
-
-    # ── 7. Submit sbatch job ─────────────────────────────────────────────────
-    ssh "${HPC_HOST}" \
-        "sbatch --chdir=${HPC_SCRATCH}/${sim_name}/input ${SBATCH_SCRIPT}"
-
-    total_submitted=$(( total_submitted + 1 ))
-    echo "  Submitted: ${sim_name}"
-    echo ""
-
-done   # fin count loop
-done   # profile loop
-
-echo "======================================================================"
-echo "  All done. Total simulations submitted: ${total_submitted}"
-echo "======================================================================"
+# Also print to stdout
+print("".join(all_lines))
+print(f"\n→ Written to {OUTPUT_FILE}")
