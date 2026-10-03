@@ -1,0 +1,57 @@
+# PR sweep plan.
+#
+# GOAL: sweep pressure_ratio (PR) as the OUTER variable, and at every PR
+# value, run a flat inner sweep over clearance / rpm / step_height (plain
+# +/-variation_pct, `points` values each -- no outer bands, kept simple
+# on purpose). fin_angle is swept too (interval mode, independent of
+# everything else -- it's a fin geometry angle, unrelated to PR/swirl).
+#
+# WHY NO SEPARATE SWIRL/inlet_swirl ENTRY:
+# K_in (below) is not a geometry value you set -- it's the target inlet
+# swirl RATIO that the BC controller SOLVES FOR on every single case,
+# using THAT case's own rpm/clearance/geometry (see compute_target_velocity
+# in cara_sweep.sh). With K_in held at the baseline value (0.6), every
+# PR x clearance x rpm x step_height combination automatically gets its
+# own correctly re-converged swirl angle for that ratio -- you get the
+# right physical inlet condition for free, per case, without needing to
+# touch velocity_angle_alpha directly. Adding an `interval`-mode swirl
+# entry here would instead hardcode a fixed angle across all these cases,
+# which fights with (and makes redundant) what the controller is already
+# doing. So: just leave K_in as a fixed scalar and don't sweep swirl here.
+#
+# NOTE ON THE OUTER: BLOCK -- pressure_ratio as an outer variable requires
+# the derived_pr bugfix in cara_sweep.sh (writing the raw PR number
+# straight into total_pressure is wrong; it must be PR * outlet_pressure).
+# Use the patched cara_sweep.sh, not the original, with this plan file.
+K_in: [0.6]
+
+outer:
+  variable: pressure_ratio
+  values: [1.5, 1.75, 2.0, 2.25, 2.5, 2.75, 3.0]
+  fmt: "%.4f"
+
+inner:
+  #- variable: clearance
+    #variation_pct: 60
+    #points: 3
+
+  #- variable: rpm
+    #variation_pct: 60
+    #points: 30
+
+  - variable: step_height
+    variation_pct: 40
+    points: 30
+
+  #- variable: fin_angle
+    #start: 8
+    #end: 40
+    #points: 17
+
+# Documentation/reference only -- NOT parsed by cara_sweep.sh. The actual
+# block injected into each case's TRACE_control.input is the hardcoded
+# heredoc in inject_bc_control_block() (see CHANGELOG in cara_sweep.sh).
+control file: |
+  all immediate SetBoundaryControlSet EvaluationPanel_v inlet VelocityTheta Mass
+  all immediate SetBoundaryControlSet ControPanel_v inlet VelocityAngleThetaAbs Mass
+  all immediate SetBoundaryConditionController -op Scale 110.968 0.1 0.0500 2000 -cPanel ControPanel_v -ePanel EvaluationPanel_v -it 5000 400 -o ../output/residual/bcControl_v.dat -res 1e-4
