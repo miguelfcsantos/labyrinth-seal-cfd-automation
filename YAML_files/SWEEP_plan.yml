@@ -1,0 +1,102 @@
+# PR sweep plan.
+#
+# GOAL: sweep pressure_ratio (PR) as the OUTER variable, and at every PR
+# value, run a flat inner sweep over clearance / rpm / step_height (plain
+# +/-variation_pct, `points` values each -- no outer bands, kept simple
+# on purpose). fin_angle is swept too (interval mode, independent of
+# everything else -- it's a fin geometry angle, unrelated to PR/swirl).
+#
+# WHY NO SEPARATE SWIRL/inlet_swirl ENTRY:
+# K_in (below) is not a geometry value you set -- it's the target inlet
+# swirl RATIO that the BC controller SOLVES FOR on every single case,
+# using THAT case's own rpm/clearance/geometry (see compute_target_velocity
+# in cara_sweep.sh). With K_in held at the baseline value (0.6), every
+# PR x clearance x rpm x step_height combination automatically gets its
+# own correctly re-converged swirl angle for that ratio -- you get the
+# right physical inlet condition for free, per case, without needing to
+# touch velocity_angle_alpha directly. Adding an `interval`-mode swirl
+# entry here would instead hardcode a fixed angle across all these cases,
+# which fights with (and makes redundant) what the controller is already
+# doing. So: just leave K_in as a fixed scalar and don't sweep swirl here.
+#
+# NOTE ON THE OUTER: BLOCK -- pressure_ratio as an outer variable requires
+# the derived_pr bugfix in cara_sweep.sh (writing the raw PR number
+# straight into total_pressure is wrong; it must be PR * outlet_pressure).
+# Use the patched cara_sweep.sh, not the original, with this plan file.
+
+# ================================================================
+# OUTER VARIABLE REFERENCE
+# Format = printf format used by cara_sweep.sh; values are physical values.
+# Example simulation = resulting folder/case naming.
+#
+# clearance       | %.6f | 0.000310 | CLR310
+# x_offset        | %.3f  | 0.005    | XOF5
+# rpm             | %.1f  | 4500     | RPM4500
+# pressure_ratio  | %.2f  | 1.25     | PR125
+# swirl           | %.4f  | 0.3000   | K3000
+# fin_thickness   | %.6f  | 0.001000 | FTH10
+# fin_angle       | %.0f  | 5        | FAN5
+# step_height     | %.6f  | 0.003000 | SH30  [NOT valid as normal outer]
+# fin_height      | %.7f  | 0.0030000 | FH30
+# radius_fillet   | %.6f  | 0.001000 | RF10
+# distance_fin    | %.6f  | 0.003000 | DF3
+#
+# Special outer sweeps:
+# number_of_fins  | special interactive sweep
+# step_height_profile | special interactive sweep
+# ================================================================
+
+
+K_in: [0.7]
+
+outer:
+  variable: fin_thickness
+  values: [0.0012,0.0031]
+
+
+inner:
+  - variable: clearance
+    variation_pct: 60
+    points: 1
+
+  - variable: rpm
+    variation_pct: 60
+    points: 1
+
+  - variable: pressure_ratio
+    variation_pct: 40
+    points: 1
+
+  - variable: step_height
+    variation_pct: 40
+    points: 1
+
+  - variable: radius_fillet
+    variation_pct: 40
+    points: 1
+
+  - variable: swirl
+    start: 0.1
+    end: 0.4
+    points: 1
+
+  #- variable: fin_height
+    #variation_pct: 40
+    #points: 1
+
+  - variable: fin_height
+    variation_pct: 40
+    points: 1
+
+  - variable: fin_angle
+    start: 8
+    end: 40
+    points: 1
+
+# Documentation/reference only -- NOT parsed by cara_sweep.sh. The actual
+# block injected into each case's TRACE_control.input is the hardcoded
+# heredoc in inject_bc_control_block() (see CHANGELOG in cara_sweep.sh).
+control file: |
+  all immediate SetBoundaryControlSet EvaluationPanel_v inlet VelocityTheta Mass
+  all immediate SetBoundaryControlSet ControPanel_v inlet VelocityAngleThetaAbs Mass
+  all immediate SetBoundaryConditionController -op Scale 110.968 0.1 0.0500 2000 -cPanel ControPanel_v -ePanel EvaluationPanel_v -it 5000 400 -o ../output/residual/bcControl_v.dat -res 1e-4
