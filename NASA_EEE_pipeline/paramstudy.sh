@@ -86,19 +86,19 @@
 
 set -uo pipefail
 
-WORKDIR="/localdata1/testcases/staggered-labyrinth-seal_new/examples/Denecke_cavity"
-BASECASE="/localdata1/testcases/staggered-labyrinth-seal_new/lab_altered_py"
+WORKDIR="..."
+BASECASE="..."
 
 # The sweep-plan YAML (K_in, outer:, inner:).
-k_plan_FILE="/home/corr_mi/Projects/MM/SWEEP_plan.yml"
+k_plan_FILE="..."
 
 # BASELINE files (never written to by the sweep logic).
 GEOMETRY_FILE="$WORKDIR/geometry.yml"
 PARAMETER_FILE="$WORKDIR/parameter.yml"
 
-LOCAL_SIMS_BASE="/home/corr_mi/Projects/MM/testGEO"
-REMOTE_SIMS_BASE="/scratch/ws25/corr_mi-mig_param_fac/Param_sims"
-TRACESTART_SCRIPT="/scratch/ws25/corr_mi-mig_param_fac/tracestart_OG.sh"
+LOCAL_SIMS_BASE=".."
+REMOTE_SIMS_BASE="/.."
+TRACESTART_SCRIPT="../tracestart_OG.sh"
 
 # Total axial fin span (m). Only used by the number_of_fins special sweep.
 TOTAL_FIN_SPAN=0.06
@@ -817,14 +817,14 @@ ship_and_submit() {
     local remote_dir="${REMOTE_SIMS_BASE}"
     [[ -n "$folder" ]] && remote_dir="${REMOTE_SIMS_BASE}/${folder}"
 
-    ssh cara.dlr.de "mkdir -p ${remote_dir}"
+    ssh your hpc" "mkdir -p ${remote_dir}"
 
     if ! scp -r "$outdir" "cara.dlr.de:${remote_dir}/"; then
         echo "ERROR: scp failed for $case_name -- leaving local copy at $outdir, not submitting."
         return 1
     fi
 
-    ssh cara.dlr.de "sbatch --chdir=${remote_dir}/${case_name}/input $TRACESTART_SCRIPT"
+    ssh "your hpc" "sbatch --chdir=${remote_dir}/${case_name}/input $TRACESTART_SCRIPT"
     echo "Submitted: ${remote_dir}/${case_name}"
 
     rm -rf "$outdir"
