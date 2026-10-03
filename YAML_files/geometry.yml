@@ -1,0 +1,20 @@
+inner_height_inlet: 0.1273725
+
+number_of_fins: 9
+
+x_offset: 0.000
+
+step_height: [0.00031, 0.00031, 0.00031, 0.00031, 0.00031, -0.00031, -0.00031, -0.00031]  # Height of steps (set to 0 if there are no steps)
+distance_fin: 0.006
+relative_axial_position_step : 0.5
+relative_axial_length_inlet : 0.5
+relative_axial_length_outlet : 0.5
+
+fin geometry:
+clearence: 0.00031  #0.00031
+fin_height: 0.0013175
+fin_tip_width: 0.0001
+fin_wall_angle: 10 # Degrees
+
+fillets:
+radius_fillet: 0.0002     # Radius of the fins fillets (set to 0 if there are no fillets)
