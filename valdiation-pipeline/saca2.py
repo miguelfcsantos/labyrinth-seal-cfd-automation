@@ -21,8 +21,8 @@ The conv/div folder is determined automatically by reading geometry_used.yml:
   step_height: [-x, -x, -x]  →  conv (negative values)
 
 Usage:
-    python3 saca.py                                          # batch: all sims in MERGED_BASE
-    python3 saca.py /localdata1/corr_mi/OI/TEST/merge_done/LC  # single sim
+    python3 saca2.py                                          # batch: all sims in MERGED_BASE
+    python3 saca2.py /localdata1/corr_mi/OI/TEST/merge_done/LC  # single sim
 """
 
 import os
@@ -39,7 +39,7 @@ INPUT_FILE     = "output/output/POST/d1_spanwise_primitives_flux.dat"
 GEOMETRY_FILE  = "geometry_used.yml"
 PARAMETERS_FILE = "parameters_used.yml"
 
-PLOT_SCRIPT    = "/localdata1/corr_mi/PLOTS_DENECKE/plot_saca.py"
+PLOT_SCRIPT    = "/localdata1/corr_mi/PLOTS_DENECKE/plot_velocity_profiles.py"
 
 # Normalisation: C = V / (RADIUS * OMEGA)
 RADIUS = 0.257                # [m]
