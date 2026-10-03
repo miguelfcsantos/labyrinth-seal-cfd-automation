@@ -48,9 +48,9 @@ The case folder (mesh, input files, `sim_config.yml`) is copied to HPC scratch s
 
 ---
 
-## 3. Post-process the finished simulation (`autoPost.sh`)
+## 3. Post-process the finished simulation (`singleAutoPost.sh`)
 
-Once a solve is done, `autoPost.sh` turns raw solver output into analyzable data. It can run on a single sim folder or, with no argument, loop over every sim in a default directory (batch mode calls itself once per sim and reports a pass/fail summary).
+Once a solve is done, `singleAutoPost.sh` turns raw solver output into analyzable data. It can run on a single sim folder or, with no argument, loop over every sim in a default directory (batch mode calls itself once per sim and reports a pass/fail summary).
 
 Six steps per sim:
 
