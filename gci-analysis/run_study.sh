@@ -23,14 +23,14 @@ module load tecplot
 module load trace_suite/9.8.0-double
 
 # ── Paths ─────────────────────────────────────────────────────────────────────
-BASE_DIR="/home/corr_mi/Projects/MM/testGEO"
-JOU_DIR="/home/corr_mi/Projects/MM/models"
-HPC_SCRATCH="/scratch/ws25/corr_mi-den_mig/sims"
-HPC_HOST="cara.dlr.de"
-SBATCH_SCRIPT="/scratch/ws25/corr_mi-RestoredMig/corr_mi-workmig-1779156012/tracestart_OG.sh"
+BASE_DIR="/home/..../Projects/MM/testGEO"
+JOU_DIR="/home/..../Projects/MM/models"
+HPC_SCRATCH="/..../sims"
+HPC_HOST="......"
+SBATCH_SCRIPT="/scratch/...../tracestart_OG.sh"
 
-PARAM_YML="/localdata1/testcases/staggered-labyrinth-seal_new/examples/Denecke_cavity/parameter.yml"
-GEO_YML="/localdata1/testcases/staggered-labyrinth-seal_new/examples/Denecke_cavity/geometry.yml"
+PARAM_YML="/...../parameter.yml"
+GEO_YML="/...../geometry.yml"
 
 # ── Hardcoded grid factor list: "SIM_NAME GF_VALUE" ──────────────────────────
 declare -a GF_ENTRIES=(
