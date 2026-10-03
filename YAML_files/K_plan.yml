@@ -1,0 +1,237 @@
+# Nested sweep plan.
+#
+# outer: the variable you hold fixed at each of `values` in turn. Must be
+#        a key in the VAR_KEY registry in cara_sweep.sh, and must NOT be
+#        "magnitude" mode (step_height can't be an outer variable -- it's
+#        list-valued, inner-only).
+#        Optional `fmt` overrides the registry's printf format for how
+#        the outer value appears in case names (default: registry's fmt).
+#        NOTE: this "outer:" block is the pre-existing NESTED-LOOP
+#        feature (sweep every inner: entry once per outer value) -- it
+#        is unrelated to the per-entry outer_variation_pct*/outer_points*
+#        OUTER-BAND feature below, despite the similar name. The two can
+#        be combined if needed.
+#
+# inner: the variables swept (one at a time, others at baseline) at
+#        EVERY outer value (or just once, flat, if no outer: block is
+#        live). Each entry needs fields matching that variable's mode:
+#          - direct / derived_pr / magnitude -> variation_pct, points
+#          - interval                        -> start, end, points
+#
+#        BANDS (direct / derived_pr / magnitude entries only, not
+#        interval variables like swirl/fin_angle): an optional `bands:`
+#        field controls which region of the +/-variation_pct ...
+#        +/-(variation_pct+outer_variation_pct) space actually gets
+#        simulated for that entry:
+#
+#          bands: inner  (the default when no outer_ fields are present)
+#              -> just the plain +/-variation_pct sweep, `points` values.
+#                 Unchanged original behavior.
+#
+#          bands: outer  (the default when outer band fields ARE present
+#                         and `bands` is omitted -- kept for backward
+#                         compatibility)
+#              -> ONLY the two bands OUTSIDE +/-variation_pct, out to
+#                 +/-(variation_pct+outer_variation_pct). The inner
+#                 +/-variation_pct region is NOT re-simulated -- use this
+#                 once you've already run that region in an earlier
+#                 sweep. `points` isn't needed in this mode (variation_pct
+#                 is only the anchor marking where the outer bands start)
+#                 and is ignored if present.
+#
+#          bands: both
+#              -> BOTH the inner sweep (`points` values in
+#                 +/-variation_pct) AND the outer bands beyond it,
+#                 submitted together from one entry.
+#
+#        variation_pct is always required (it's the inner/outer boundary
+#        either way).
+#
+#        Two ways to specify the outer band width/density:
+#
+#          SYMMETRIC (original, still supported):
+#            outer_variation_pct: <pct>
+#            outer_points: <n>
+#          Same percent both sides; `outer_points` is split
+#          floor(n/2) negative / ceil(n/2) positive (extra point, if
+#          any, goes to the positive side).
+#
+#          ASYMMETRIC (new -- lets the negative and positive outer bands
+#          have different widths and different point counts):
+#            outer_variation_pct_neg: <pct>   outer_points_neg: <n>
+#            outer_variation_pct_pos: <pct>   outer_points_pos: <n>
+#          All four must be given together (partial sets are dropped
+#          with a warning -- the entry falls back to no outer band, or
+#          to `bands: inner` only if bands: both). Setting a side's
+#          points to 0 drops that side entirely (one-sided band). These
+#          four fields take precedence over outer_variation_pct/
+#          outer_points if both styles are somehow present on the same
+#          entry.
+#
+#        BOUNDARY-DUPLICATE FIX: the +/-variation_pct point itself is
+#        the edge of the *inner* sweep (or, for bands: outer, the edge
+#        of whatever inner sweep you already ran separately). The outer
+#        band is conceptually anchored there but no longer re-emits that
+#        exact value -- it generates its points starting just beyond the
+#        boundary, spaced as if the boundary point were still part of
+#        the grid. So you never get two simulations landing on the same
+#        +/-variation_pct value.
+#
+#        Whichever fields a given `bands` mode needs must be present, or
+#        the entry is skipped with a warning.
+#
+#        Example (symmetric): variation_pct: 5, outer_variation_pct: 40,
+#        outer_points: 4, bands: outer -> 2 points in (-45%, -5%), 2
+#        points in (+5%, +45%) (the +/-5% boundary itself excluded,
+#        already covered by the inner sweep), and the +/-5% region
+#        itself is left alone (not re-run).
+#
+#        Example (asymmetric): variation_pct: 5, outer_variation_pct_neg: 40,
+#        outer_points_neg: 6, outer_variation_pct_pos: 15, outer_points_pos: 2,
+#        bands: outer -> 6 points in (-45%, -5%), 2 points in (+5%, +20%).
+#
+# K_in: the run-wide inlet swirl ratio workflow constant. Can be either
+#       a single scalar:
+#           K_in: 0.7
+#       or a list, in which case the ENTIRE sweep (whichever mode you
+#       pick when the script runs -- YAML-driven or interactive) is run
+#       once per K value, back to back, in an outer loop around
+#       everything else:
+#           K_in: [0.2, 0.5, 0.7]
+#       Each case name is still prefixed with its own K value (see
+#       CASE-NAME CONVENTION in cara_sweep.sh), so cases from different
+#       K passes never collide.
+K_in: [0.6]
+
+#outer:
+#  variable: swirl
+#  values: [40, 50, 60, 70]
+#  fmt: "%.1f"
+
+inner:
+  #- variable: swirl_ratio
+    #bands: both
+    #variation_pct: 30
+    #points: 15
+    #outer_variation_pct_neg: 20
+    #outer_points_neg: 6
+    #outer_variation_pct_pos: 40
+    #outer_points_pos: 10
+
+  #- variable: rpm
+    #bands: both
+    #variation_pct: 30
+    #points: 15
+    #outer_variation_pct_neg: 20
+    #outer_points_neg: 8
+    #outer_variation_pct_pos: 30
+    #outer_points_pos: 10
+
+  #- variable: pressure_ratio
+    #bands: both
+    #variation_pct: 30
+    #points: 15
+    #outer_variation_pct_neg: 15
+    #outer_points_neg: 6
+    #outer_variation_pct_pos: 40
+    #outer_points_pos: 10
+
+  #- variable: step_height
+    #bands: both
+    #variation_pct: 30
+    #points: 15
+    #outer_variation_pct_neg: 20
+    #outer_points_neg: 8
+    #outer_variation_pct_pos: 20
+    #outer_points_pos: 8
+
+  #- variable: fin_thickness
+    #variation_pct: 50
+    #points: 25
+    ##outer_variation_pct_neg: 20
+    ##outer_points_neg: 8
+    ##outer_variation_pct_pos: 20
+    ##outer_points_pos: 8
+
+  #- variable: fin_height
+    #variation_pct: 50
+    #points: 25
+    ##outer_variation_pct_neg: 20
+    ##outer_points_neg: 8
+    ##outer_variation_pct_pos: 20
+    ##outer_points_pos: 8
+  #- variable: radius_fillet
+    #variation_pct: 50
+    #points: 25
+    ##outer_variation_pct_neg: 20
+    ##outer_points_neg: 8
+    ##outer_variation_pct_pos: 20
+    ##outer_points_pos: 8
+
+  - variable: swirl_ratio
+    start: 0.0
+    end: 0.8
+    points: 18
+
+   #bands: outer example -- the +/-30% region for clearance (above) has
+   #already been run, so this ONLY adds the outer bands beyond it,
+   #starting just past +/-30% (the +/-30% point itself is not repeated)
+   #out to +/-50%. Uncomment to run just the outer bands (variation_pct
+   #here is only the anchor, not re-swept):
+   #- variable: clearance
+     #bands: outer
+     #variation_pct: 30
+     #outer_variation_pct: 20
+     #outer_points: 10
+
+  # bands: both example -- runs the +/-5% region (6 points) AND the
+  # outer bands beyond it out to +/-45%, together in one go:
+  # - variable: x_offset
+  #   bands: both
+  #   variation_pct: 5
+  #   points: 6
+  #   outer_variation_pct: 40
+  #   outer_points: 4
+
+  # asymmetric outer-band example -- wider/denser band on the negative
+  # side than the positive side, still anchored at +/-5% (boundary point
+  # not repeated):
+  # - variable: x_offset
+  #   bands: outer
+  #   variation_pct: 5
+  #   outer_variation_pct_neg: 40
+  #   outer_points_neg: 6
+  #   outer_variation_pct_pos: 15
+  #   outer_points_pos: 2
+
+  # --- step_height magnitude, mode: magnitude ---
+  # - variable: step_height
+  #   variation_pct: 30
+  #   points: 30
+
+  # --- fin_height, mode: direct ---
+  # - variable: fin_height
+  #   variation_pct: 20
+  #   points: 10
+
+  # --- radius_fillet, mode: direct ---
+  # - variable: radius_fillet
+  #   variation_pct: 30
+  #   points: 10
+
+  # --- distance_fin, mode: direct ---
+  # number_of_fins is held constant -- sweeping distance_fin directly
+  # like this changes the TOTAL fin span (spacing grows/shrinks, n_fins
+  # unchanged). step_height list is untouched (same length as baseline).
+  # - variable: distance_fin
+  #   variation_pct: 30
+  #   points: 10
+
+# Documentation/reference only -- NOT parsed by cara_sweep.sh. The actual
+# block injected into each case's TRACE_control.input is the hardcoded
+# heredoc in inject_bc_control_block() (see CHANGELOG in cara_sweep.sh).
+control file: |
+  all immediate SetBoundaryControlSet EvaluationPanel_v inlet VelocityTheta Mass
+  all immediate SetBoundaryControlSet ControPanel_v inlet VelocityAngleThetaAbs Mass
+  all immediate SetBoundaryConditionController -op Scale 110.968 0.1 0.0500 2000 -cPanel ControPanel_v -ePanel EvaluationPanel_v -it 5000 400 -o ../output/residual/bcControl_v.dat -res 1e-4
+
