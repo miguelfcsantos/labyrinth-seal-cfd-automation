@@ -7,8 +7,8 @@ import itertools
 #  CONFIG
 # ============================================================
 
-MERGE_DONE_DIR = "/localdata1/corr_mi/OI/TEST/merge_done"
-OUTPUT_FILE    = "/localdata1/corr_mi/VALUES/ratio_verification.txt"
+MERGE_DONE_DIR = "/path/to/simulations/merge_done"
+OUTPUT_FILE    = "/path/to/results/ratio_verification.txt"
 
 SIM_TYPES  = ["FR", "FS", "FH"]
 VARIANTS   = ["Sch", "Off"]
