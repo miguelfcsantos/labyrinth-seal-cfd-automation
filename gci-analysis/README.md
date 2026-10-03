@@ -229,15 +229,6 @@ RESULTS/
 | `gci_results_{avg_type}.yml` | All computed values as flat `key: value` lines |
 | `failed_simulations.yml` | Missing input files, parse errors and failed runs |
 
----
-
-## Known limitations
-
-- Cell counts are hardcoded (see above).
-- The values-file parser is line based, not a YAML parser. Blocks must be separated by a comment line or a line that does not match `key: value`, and values must not have trailing inline comments.
-- A diverging sequence can still report a converged `p`. Check `eps21` and `eps32` in the results when `p` looks suspicious.
-- `run_study.sh` has no error handling: if mesh generation or `prep.py` fails, the script continues and may upload a broken case.
-- `run_study.sh` edits `parameter.yml` in place, so after a run the file holds the last grid factor. The values used for each case are saved as `parameters_used.yml` and `geometry_used.yml` in its directory.
 
 ---
 
