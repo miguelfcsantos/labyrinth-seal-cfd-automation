@@ -32,7 +32,7 @@ VALUES/RESULTS/
 
 ### Post-processing is not part of this folder
 
-The TRACE results are **not** converted to `values_*.yml` by any script in this folder. That step is done by the **single auto post** pipeline, documented in the [`validation/`](../validation) directory of this repository. Running it for each finished simulation writes the `values_*.yml` files into the `VALUES` directory, and `gci_batch.py` reads them from there.
+The TRACE results are **not** converted to `values_*.yml` by any script in this folder. That step is done by the **single auto post** pipeline, documented in the [`validation/`](../validation-pipeline) directory of this repository. Running it for each finished simulation writes the `values_*.yml` files into the `VALUES` directory, and `gci_batch.py` reads them from there.
 
 So the order is: launch the simulations, wait for them to finish, run single auto post on each, then run the GCI script.
 
