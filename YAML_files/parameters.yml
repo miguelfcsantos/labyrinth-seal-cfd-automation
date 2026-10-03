@@ -1,0 +1,65 @@
+configuration: rotational
+rpm: 13866 #13866
+discretization: FV  # FV or DG
+mesh:
+    p_order: 0
+    q_order: 1
+    grid_factor: 1.2
+    k_direction:
+        n_cells: 60  #60 This is not changed by the grid_factor
+        pitch: 6.0 #slice
+    extension_inlet: 0.002
+    extension_outlet: 0.004
+    cell_size_inlet: 0.0005
+    cell_size_outlet: 0.0001
+    use_low_reynolds_resolution: true
+    low_reynolds_mesh:
+        first_cell_size: 0.0000003
+        stretching: 1.1 #1.1
+        tolerance: 0.1
+    cell_size: 0.00005
+    #cell_size_clearence : 0.000005
+    stretching_at_tip: 1.1
+    number_partitions: 128
+output_settings:
+    interleave_residual: 100
+    interleave_cgns: 10000
+initialization:
+    init_type: zero
+global_parameter:
+    frequency: 195312.5  # Only used for DG
+    cfl_start: 1
+    cfl_start_timestep: 1
+    cfl_stop: 10
+    cfl_stop_timestep: 2000
+    number_of_timesteps: 60000
+    turbulence_model: MenterSST2003
+control_file:
+    preconditioning:
+        active: false
+boundaries:
+    side_walls:
+        boundary_condition: periodic
+    outlet:
+        boundary_condition: Unsteady1DCharacteristics
+        create_bands: false
+        boundary_values:
+            pressure: 1352840.75
+    inlet:
+        boundary_condition: Unsteady1DCharacteristics
+        create_bands: false
+        boundary_values:
+            velocity_angle_beta: 0.0 #constant
+            velocity_angle_alpha: 80.35
+            turbulent_lengthscale: 2e-6
+            turbulent_intensity: 0.02
+
+            total_temperature: 844.15
+            total_pressure: 2750430.0
+gas_properties:
+    gamma: 1.4
+    gas_constant: 287.06
+    reference_molecular_visc: 1.7198E-5
+
+
+
