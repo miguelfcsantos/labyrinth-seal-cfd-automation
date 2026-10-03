@@ -19,7 +19,7 @@ run_study.sh
    ▼
 TRACE simulations on the HPC
    ▼
-single auto post          (see the `validation/` directory of this repository)
+single auto post          (see the `validation-pipeline/` directory of this repository)
    │  writes values_{PREFIX}{ROW}{MESH}.yml
    ▼
 VALUES/ directory
