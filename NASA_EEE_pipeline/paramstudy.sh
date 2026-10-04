@@ -67,7 +67,7 @@
 #   Registry-driven cases are submitted as "_BC" cases: the control file
 #   gets a SetBoundaryConditionController block that scales the inlet
 #   VelocityAngleThetaAbs until the mass-averaged inlet VelocityTheta hits
-#   K_in * omega * R. bc_finalize.sh later extracts the converged angle
+#   K_in * omega * R. cara_bc_finalize.sh later extracts the converged angle
 #   and submits the real case.
 #   The plan file's `control file:` entry is documentation only (not parsed);
 #   the heredoc in inject_bc_control_block() is the single source of truth.
@@ -775,7 +775,7 @@ run_case() {
     echo "Running case: $case_name"
     echo "=============================="
 
-    # Loaded here so this also works when bc_finalize.sh sources this
+    # Loaded here so this also works when cara_bc_finalize.sh sources this
     # file in library-only mode.
     module load trace_dependencies/gcc-11.4.0-trace-9.7.5-1
     module load gmc/9.6.13
@@ -1221,7 +1221,7 @@ run_legacy_sweep() {
 # =========================================================================
 # Main
 # =========================================================================
-# Library-only mode so bc_finalize.sh can `BC_SWEEP_LIB_ONLY=1 source`
+# Library-only mode so cara_bc_finalize.sh can `BC_SWEEP_LIB_ONLY=1 source`
 # this file without triggering the sweep.
 if [[ "${BC_SWEEP_LIB_ONLY:-0}" == "1" ]]; then
     return 0 2>/dev/null || exit 0
