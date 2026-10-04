@@ -24,22 +24,22 @@ import subprocess
 # CONFIGURATION
 # ---------------------------------------------------------------------------
 
-HPC_USER        = "corr_mi"
-HPC_HOST        = "cara.dlr.de"
+HPC_USER        = "your_username"
+HPC_HOST        = "hpc.example.com"
 
 # All sims, any family, grouped by family folder:
 #   sims/K2/K2_CLR_230/
 #   sims/PR15000/PR15000_CLR_123/
 #   sims/FTH1230/FTH1230_FAN_4/
-HPC_SIMS        = "/scratch/ws25/corr_mi-mig_param_fac/sims"
+HPC_SIMS        = "/path/to/hpc/workspace/sims"
 
 # Shared "done" archive for ALL sim families, always grouped by prefix:
 #   sims_valued/K3/K3_CLR_123
 #   sims_valued/PR15000/PR15000_SH_123
 #   sims_valued/FTH1230/FTH1230_FAN_4
-HPC_SIMS_VALUED = "/scratch/ws25/corr_mi-mig_param_fac/sims_valued"
+HPC_SIMS_VALUED = "/path/to/hpc/workspace/sims_valued"
 
-VALUES_DIR = "/localdata1/corr_mi/VALUES"
+VALUES_DIR = "/path/to/local/VALUES"
 
 FINISH_MARKER = "TRACE terminated normally"
 
