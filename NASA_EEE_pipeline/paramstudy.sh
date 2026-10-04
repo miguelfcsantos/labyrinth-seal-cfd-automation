@@ -67,7 +67,7 @@
 #   Registry-driven cases are submitted as "_BC" cases: the control file
 #   gets a SetBoundaryConditionController block that scales the inlet
 #   VelocityAngleThetaAbs until the mass-averaged inlet VelocityTheta hits
-#   K_in * omega * R. cara_bc_finalize.sh later extracts the converged angle
+#   K_in * omega * R. bc_finalize.sh later extracts the converged angle
 #   and submits the real case.
 #   The plan file's `control file:` entry is documentation only (not parsed);
 #   the heredoc in inject_bc_control_block() is the single source of truth.
@@ -99,6 +99,12 @@ PARAMETER_FILE="$WORKDIR/parameter.yml"
 LOCAL_SIMS_BASE=".."
 REMOTE_SIMS_BASE="/.."
 TRACESTART_SCRIPT="../tracestart_OG.sh"
+
+# HPC login target for ssh/scp (user@host, or an alias from ~/.ssh/config).
+HPC_HOST="your_username@hpc.example.com"
+
+# Directory holding the gmc journal files used in run_case().
+GMC_SCRIPT_DIR="/path/to/gmc_scripts"
 
 # Total axial fin span (m). Only used by the number_of_fins special sweep.
 TOTAL_FIN_SPAN=0.06
@@ -769,7 +775,7 @@ run_case() {
     echo "Running case: $case_name"
     echo "=============================="
 
-    # Loaded here so this also works when cara_bc_finalize.sh sources this
+    # Loaded here so this also works when bc_finalize.sh sources this
     # file in library-only mode.
     module load trace_dependencies/gcc-11.4.0-trace-9.7.5-1
     module load gmc/9.6.13
@@ -802,8 +808,8 @@ run_case() {
 
     prep.py -clb -cgns TRACE.cgns -np 128 -sb TRACE_split.cgns splitScript.jou mergeScript.jou
     gmcPlay splitScript.jou
-    gmcPlay /home/corr_mi/Projects/MM/conv_gmc.jou
-    gmcPlay /home/corr_mi/Projects/MM/models/OmegaSST_Off_Bardina.jou
+    gmcPlay "${GMC_SCRIPT_DIR}/conv_gmc.jou"
+    gmcPlay "${GMC_SCRIPT_DIR}/models/OmegaSST_Off_Bardina.jou"
     cd "$WORKDIR"
     return 0
 }
@@ -817,14 +823,14 @@ ship_and_submit() {
     local remote_dir="${REMOTE_SIMS_BASE}"
     [[ -n "$folder" ]] && remote_dir="${REMOTE_SIMS_BASE}/${folder}"
 
-    ssh your hpc" "mkdir -p ${remote_dir}"
+    ssh "$HPC_HOST" "mkdir -p ${remote_dir}"
 
-    if ! scp -r "$outdir" "cara.dlr.de:${remote_dir}/"; then
+    if ! scp -r "$outdir" "${HPC_HOST}:${remote_dir}/"; then
         echo "ERROR: scp failed for $case_name -- leaving local copy at $outdir, not submitting."
         return 1
     fi
 
-    ssh "your hpc" "sbatch --chdir=${remote_dir}/${case_name}/input $TRACESTART_SCRIPT"
+    ssh "$HPC_HOST" "sbatch --chdir=${remote_dir}/${case_name}/input $TRACESTART_SCRIPT"
     echo "Submitted: ${remote_dir}/${case_name}"
 
     rm -rf "$outdir"
@@ -1215,7 +1221,7 @@ run_legacy_sweep() {
 # =========================================================================
 # Main
 # =========================================================================
-# Library-only mode so cara_bc_finalize.sh can `BC_SWEEP_LIB_ONLY=1 source`
+# Library-only mode so bc_finalize.sh can `BC_SWEEP_LIB_ONLY=1 source`
 # this file without triggering the sweep.
 if [[ "${BC_SWEEP_LIB_ONLY:-0}" == "1" ]]; then
     return 0 2>/dev/null || exit 0
@@ -1242,7 +1248,7 @@ cd "$WORKDIR" || { echo "Cannot enter working directory"; exit 1; }
 
 OUTBASE="$LOCAL_SIMS_BASE"
 mkdir -p "$OUTBASE"
-ssh cara.dlr.de "mkdir -p ${REMOTE_SIMS_BASE}"
+ssh "$HPC_HOST" "mkdir -p ${REMOTE_SIMS_BASE}"
 
 load_plan_from_yaml
 
@@ -1281,7 +1287,7 @@ if (( ${#FAILED_CASES[@]} > 0 )); then
 fi
 if [[ "$HAD_BC_CASES" == "1" ]]; then
     echo "These were BC cases. Once they've converged on the HPC, run:"
-    echo "  ./cara_bc_finalize.sh"
+    echo "  ./bc_finalize.sh"
     echo "to extract angles and submit the real (non-BC) simulations."
 fi
 echo "=============================="
