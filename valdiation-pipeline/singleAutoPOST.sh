@@ -2,15 +2,15 @@
 # autoPost.sh — full post-processing pipeline for a single simulation
 #
 # Usage:
-#   bash autoPost.sh /localdata1/corr_mi/OI/sims/LC   ← single sim (original behaviour)
-#   bash autoPost.sh                                    ← process ALL sims in default folder
+#   bash autoPost.sh /your/path/local/sims/LC   ← single sim (original behaviour)
+#   bash autoPost.sh                            ← process ALL sims in default folder
 set -e
 
-DEFAULT_SIMS_DIR="/localdata1/corr_mi/OI/TEST/sims"
+DEFAULT_SIMS_DIR="/your/path/local/sims"
 
 # HPC destination for the finished, post-processed sim folder
-HPC_HOST="cara.dlr.de"
-HPC_SCRATCH="/scratch/ws25/corr_mi-den_mig/POST_SIMS"
+HPC_HOST="your.hpc.host"
+HPC_SCRATCH="/your/path/hpc/POST_SIMS"
 
 # Heavy files to delete locally once the post-processed folder has
 # been successfully uploaded to the HPC. Paths are relative to
@@ -74,21 +74,21 @@ echo "======================================================"
 
 echo ""
 echo "[1/6] Generating residuals..."
-python3 /home/corr_mi/genRESIDUALS_single.py "$SIM_DIR"
+python3 /your/path/genRESIDUALS_single.py "$SIM_DIR"
 
 echo ""
 echo "[2/6] Generating grid..."
-python3 /home/corr_mi/griddd_single.py "$SIM_DIR"
+python3 /your/path/griddd_single.py "$SIM_DIR"
 
 echo ""
 echo "[3/6] Running merger + POST..."
-python3 /home/corr_mi/merger_single.py "$SIM_DIR"
-DONE_DIR="/localdata1/corr_mi/OI/TEST/merge_done"
+python3 /your/path/merger_single.py "$SIM_DIR"
+DONE_DIR="/your/path/local/merge_done"
 
 echo ""
 echo "[4/6] Running saca.py..."
-python3 /home/corr_mi/saca2.py "$DONE_DIR/$SIM_NAME"
-python3 /home/corr_mi/bulk_calc.py
+python3 /your/path/saca2.py "$DONE_DIR/$SIM_NAME"
+python3 /your/path/bulk_calc.py
 
 # ── 5. Upload post-processed sim to HPC ────────────────────────────────────
 # set -e means: if this scp fails, the script stops right here and the
