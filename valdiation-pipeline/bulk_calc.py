@@ -3,8 +3,8 @@ import re
 import sys
 import os
 
-MERGE_DONE_DIR = "/localdata1/corr_mi/OI/TEST/merge_done"
-VALUES_DIR     = "/localdata1/corr_mi/VALUES"
+MERGE_DONE_DIR = "/your/path/local/merge_done"
+VALUES_DIR     = "/your/path/VALUES"
 
 # Reference values (no longer used for comparison, kept commented for context)
 # CD_ref = 0.2776
