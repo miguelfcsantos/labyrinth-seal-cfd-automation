@@ -1,253 +1,131 @@
-# Labyrinth Seal Fin-Count Parametric Study
+# Labyrinth Seal Fin-Count Scaling Study
 
-This repository contains the scripts used to generate, process, and analyze a parametric CFD study of a labyrinth seal.
+This repository contains the automation and analysis pipeline used for the labyrinth-seal fin-count scaling study.
 
-The study investigates the effect of the **number of fins** and **step-height configuration** on labyrinth-seal leakage mass flow. The workflow consists of:
+The workflow automates the generation and submission of the CFD cases, extraction and verification of the resulting mass-flow data, and the subsequent analysis of the fin-count scaling relation.
 
-1. **Generating and submitting the CFD simulations** — `run_study.sh`
-2. **Extracting and verifying the CFD mass-flow results** — Python post-processing script
-3. **Analyzing and plotting the results** — `laby_eq23_check.py`
-
-The complete workflow is:
-
-```text
-Parametric study definition
-        │
-        ▼
-run_study.sh
-        │
-        ▼
-TRACE CFD simulations
-        │
-        ▼
-Raw CFD results
-        │
-        ▼
-Mass-flow extraction / verification
-        │
-        ▼
-YAML result files
-        │
-        ▼
-laby_eq23_check.py
-        │
-        ▼
-Reports + heatmaps + trend plots + summary
-```
+The repository is available on **GitHub**.
 
 ---
 
-# 1. Parametric CFD Study
+## Pipeline Overview
 
-The study varies two main geometric parameters:
-
-* Number of labyrinth-seal fins
-* Step-height configuration
-
-Five step-height configurations are considered:
-
-| Configuration | Description           | Step height |
-| ------------- | --------------------- | ----------: |
-| `FS`          | Smooth                |     `0.000` |
-| `FC`          | Convergent            |    `-0.002` |
-| `FD`          | Divergent             |    `+0.002` |
-| `FCH`         | Convergent, half step |    `-0.001` |
-| `FDH`         | Divergent, half step  |    `+0.001` |
-
-The number of fins is varied from **1 to 9**.
-
-This gives:
+The complete workflow is executed in the following order:
 
 ```text
-5 step configurations × 9 fin counts = 45 CFD simulations
+2. Run simulations
+        ↓
+1. Extract and verify simulation results
+        ↓
+3. Analyze results and generate plots
 ```
 
-The individual cases follow the general naming convention:
+The scripts are therefore intended to be used in the order **2 → 1 → 3**.
 
-```text
-<CONFIGURATION>_F<N>
-```
+### Important: CFD post-processing
 
-For example:
+The CFD post-processing itself is **not performed by these scripts**.
 
-```text
-FS_F4
-FC_F6
-FDH_F9
-```
+The required CFD quantities are generated using the post-processing workflow contained in the **`validation` folder of the GitHub repository**. The automation pipeline described here operates on the resulting simulation/post-processing data.
+
+In other words:
+
+* the **simulation script** creates and submits the CFD cases;
+* the **post-processing workflow in `validation/`** processes the completed CFD solutions;
+* the **extraction/verification script** collects the relevant quantities from the resulting files;
+* the **analysis script** uses the extracted YAML data to perform the scaling-law analysis and generate the final figures.
 
 ---
 
-# 2. CFD Simulation Generation — `run_study.sh`
+# 1. Simulation Submission
 
-`run_study.sh` is the main parametric-study launcher.
+The first stage of the workflow is the automated generation and submission of the CFD cases.
 
-It automatically generates the required geometry and TRACE case for every combination of step configuration and fin count, then transfers the cases to the HPC system and submits them through Slurm.
+The simulation script defines the required study configurations, generates the corresponding simulation cases, and submits them to the TRACE simulation environment.
 
-## 2.1 Required environment
+The purpose of this script is therefore to automate the **case setup and execution** rather than to analyze the results.
 
-The script loads the DLR modules required for geometry generation, preprocessing, and TRACE:
+The output of this stage is a set of completed TRACE simulations containing the flow solutions and the associated post-processing data.
 
-```text
-trace_dependencies/gcc-11.4.0-trace-9.7.5-1
-gmc/9.6.13
-pymesh/2.0.1-numpy
-tecplot
-trace_suite/9.8.0-double
-```
-
-The script also defines the local project directory, HPC scratch directory, HPC host, TRACE input files, and geometry files.
-
-These paths are specific to the DLR computing environment and may need to be changed when running the script on another system.
-
-## 2.2 Geometry generation
-
-For every case, the script modifies the geometry definition according to the selected fin count and step-height configuration.
-
-For a case with `N` fins:
-
-```text
-number_of_fins = N
-number_of_steps = N - 1
-```
-
-The `step_height` array therefore contains one value for each step between consecutive fins.
-
-For example, a four-fin case contains three step heights.
-
-## 2.3 Simulation setup
-
-For each configuration, the script performs the following operations:
-
-1. Modify `geometry.yml`.
-2. Generate the base geometry using PyMesh.
-3. Copy the TRACE input file.
-4. Run the geometry/input preparation through `gmcPlay`.
-5. Prepare the split/merge configuration.
-6. Save the parameters used for the simulation.
-7. Save the geometry used for the simulation.
-8. Apply the CFD model journal.
-9. Create the simulation configuration file.
-10. Transfer the case to the HPC system.
-11. Submit the simulation using Slurm.
-
-The CFD model journal applied by the script is:
-
-```text
-OmegaSST_Off_Bardina.jou
-```
-
-## 2.4 Simulation metadata
-
-Each generated simulation contains a `sim_config.yml` file documenting the main parameters used for that case.
-
-The file contains information such as:
-
-```yaml
-sim_name: <case name>
-number_of_fins: <number of fins>
-number_of_steps: <number of steps>
-step_height_value: <step height>
-turbulence_model: Wilcox
-```
+The script should be run first, and the subsequent stages should only be executed once the required simulations have completed.
 
 ---
 
-# 3. CFD Result Extraction and Verification
+# 2. Result Extraction and Verification
 
-After the TRACE simulations have finished, the CFD results are processed to obtain the leakage mass-flow values.
+The second stage operates on the completed simulations.
 
-The extraction stage reads the post-processed CFD output and obtains the `MassFlow` values for the different fin-count cases.
+The script reads the generated TRACE post-processing files from the simulation directories and extracts the relevant **mass-flow rates**.
 
-The results are then stored in YAML files, which are used as the input for the final analysis script.
+For each simulation, the script:
 
-The resulting files follow the general naming convention:
+1. Locates the corresponding completed simulation directory.
+2. Reads the `d0_primitives_*.dat` files produced by the TRACE post-processing.
+3. Identifies the inlet and outlet zones.
+4. Extracts the outlet `MassFlow`.
+5. Handles the different averaging types:
 
-```text
-values_<CASE>_F<N>.yml
-```
+   * `flux`
+   * `mass`
+   * `area`
+6. Organizes the available results according to:
 
-and, for the corresponding swirl cases:
+   * simulation configuration;
+   * inlet-swirl condition;
+   * fin count;
+   * averaging method.
+7. Compares mass-flow ratios between different fin counts.
+8. Checks the results against the theoretical fin-count scaling relation.
+9. Writes a text report containing the calculated ratios, predicted ratios, differences, and percentage errors.
 
-```text
-values_s<CASE>_F<N>.yml
-```
+The script is designed to tolerate incomplete simulation sets: unavailable or missing simulations are skipped rather than causing the entire analysis to fail.
 
-For example:
+### Scaling relation
 
-```text
-values_FS_F4.yml
-values_sFS_F4.yml
-values_FD_F8.yml
-values_sFD_F8.yml
-```
-
-The extraction stage also provides a direct verification of the mass-flow scaling between different fin counts.
-
-For two cases with fin counts \(z_1\) and \(z_2\), the relation investigated is:
+The verification is based on the relation
 
 $$
-\dot{m}(z_2)
+\frac{\dot{m}(z_2)}{\dot{m}(z_1)}
 =
-\dot{m}(z_1)
-\sqrt{\frac{z_1}{z_2}}
+\sqrt{\frac{z_1}{z_2}},
 $$
 
-or equivalently:
+or equivalently,
 
 $$
-\dot{m}(z)\sqrt{z}=\text{constant}
+\dot{m}(z)\sqrt{z}=\mathrm{constant}.
 $$
 
-The extracted CFD mass flows can therefore be compared against the value predicted by this relation.
+The script compares the CFD-derived mass-flow ratio against this theoretical prediction.
 
-The earlier direct verification script can also compare the raw CFD mass-flow results between available fin counts and generate a text-based verification report.
+For each available pair of fin counts \(z_1 < z_2\), it calculates:
+
+* CFD mass flow at \(z_1\);
+* CFD mass flow at \(z_2\);
+* actual mass-flow ratio;
+* predicted mass-flow ratio;
+* ratio difference;
+* percentage error.
+
+The output is written to a text file for direct inspection of the scaling-law agreement.
 
 ---
 
-# 4. Final Analysis — `laby_eq23_check.py`
+# 3. Scaling Analysis and Visualization
 
-`laby_eq23_check.py` is the final post-processing and visualization script.
+The third stage performs the main analysis and generates the figures used to assess the scaling relation.
 
-Unlike the initial CFD-result extraction stage, this script does **not** directly access the TRACE simulation directories. It operates on the processed YAML files containing the extracted mass-flow data.
+This script does **not** read the raw CFD solutions directly.
 
-The script reads the available fin-count results, evaluates the scaling relation, and generates the final analysis outputs.
+Instead, it reads the already processed `values_*.yml` result files generated by the preceding post-processing workflow.
 
-## 4.1 Input data
-
-The script searches the configured values directory:
+For each result file, the script extracts the stored `MassFlow` value from the selected averaging block. The default averaging type is:
 
 ```text
-/localdata1/corr_mi/VALUES/fins
+mass
 ```
 
-The five study configurations are:
-
-```text
-FS
-FC
-FCH
-FD
-FDH
-```
-
-Fin-count comparisons are performed from:
-
-```text
-F2
-```
-
-through:
-
-```text
-F9
-```
-
-F1 is excluded from the Eq. 2.3 comparison because the first fin does not have an upstream step and therefore differs fundamentally from the subsequent fins.
-
-## 4.2 Averaging types
-
-The YAML files contain different averaging blocks:
+The script can also access:
 
 ```text
 flux
@@ -255,264 +133,289 @@ mass
 area
 ```
 
-The default averaging type used by the analysis is:
+The YAML files are organized according to the configuration and fin count, with separate files for the non-swirl and swirl cases.
+
+For example:
 
 ```text
-mass
+values_FC_F3.yml
+values_sFC_F3.yml
 ```
 
-The script can also be configured to use the other averaging types.
+where the `s` prefix denotes the prescribed-swirl case.
 
-## 4.3 Eq. 2.3 comparison
+---
 
-For each configuration, the script reads the available CFD mass-flow values and compares different fin-count combinations.
+## Studied Configurations
 
-For two fin counts \(z_1\) and \(z_2\), the predicted mass flow is calculated using:
+The analysis considers five seal configurations:
+
+| Case  | Configuration                      |
+| ----- | ---------------------------------- |
+| `FS`  | Smooth configuration               |
+| `FC`  | Convergent configuration           |
+| `FCH` | Convergent half-step configuration |
+| `FD`  | Divergent configuration            |
+| `FDH` | Divergent half-step configuration  |
+
+Each configuration is analyzed both:
+
+* without inlet swirl;
+* with prescribed inlet swirl.
+
+The analysis uses fin counts starting from **F2**. F1 is intentionally excluded because the first fin has no upstream step and therefore does not behave in the same way as the subsequent fins under the scaling relation.
+
+---
+
+# Equation 2.3 Analysis
+
+For every configuration and swirl condition, the script loads all available fin-count results and compares the CFD mass-flow values against
 
 $$
 \dot{m}(z_2)
 =
 \dot{m}(z_1)
-\sqrt{\frac{z_1}{z_2}}
+\sqrt{\frac{z_1}{z_2}}.
 $$
 
-The CFD result is then compared with the predicted value.
+All available fin-count pairs are considered.
 
-The script calculates:
-
-* Absolute error
-* Percentage error
-* Mean absolute error
-* Maximum absolute error
-* Standard deviation of the error
-
-All available unordered fin-count pairs are considered, with consecutive fin-count comparisons evaluated first.
-
----
-
-# 5. Generated Analysis Outputs
-
-For each step-height configuration, the analysis script generates several outputs.
-
-## 5.1 Text reports
-
-A text report is generated containing:
-
-* Available fin counts
-* Extracted CFD mass-flow values
-* Pairwise Eq. 2.3 predictions
-* Absolute errors
-* Percentage errors
-* Error statistics
-
-These reports provide the numerical basis for the subsequent plots.
-
-## 5.2 Heatmaps
-
-The script generates combined heatmaps showing the error between the CFD results and the Eq. 2.3 prediction for different fin-count combinations.
-
-The heatmaps distinguish between:
-
-* Non-swirl cases
-* Swirl cases
-
-The combined representation allows the effect of swirl on the scaling relation to be examined directly.
-
-## 5.3 Mass-flow trend plots
-
-For each step-height configuration, the script generates a plot of:
+Consecutive pairs are handled first:
 
 ```text
-Mass flow vs. number of fins
+F2–F3
+F3–F4
+F4–F5
+...
 ```
 
-The CFD results are plotted together with the corresponding Eq. 2.3 scaling curve.
+followed by the remaining possible fin-count combinations.
 
-This shows how the actual CFD mass flow changes with increasing fin count and how closely the classical scaling relation follows the CFD data.
+For each pair, the script calculates the predicted mass flow and compares it with the CFD value.
 
-## 5.4 Summary plot
+The percentage error is calculated as
 
-A combined summary plot compares the mean absolute error for the different step-height configurations.
+$$
+\mathrm{error}
+=
+\frac{\dot{m}_{\mathrm{predicted}}
+-
+\dot{m}_{\mathrm{CFD}}}
+{\dot{m}_{\mathrm{CFD}}}
+\times 100.
+$$
 
-The results are separated into:
+The script then calculates summary statistics including:
 
-* Swirl
-* Non-swirl
-
-This provides a compact comparison of the accuracy of the scaling relation across the different configurations.
+* mean absolute percentage error;
+* maximum absolute percentage error;
+* standard deviation of the percentage error.
 
 ---
 
-# 6. Important Note on Eq. 2.3
+# Generated Outputs
 
-The relation
+The third script generates three types of graphical output.
 
-$$
-\dot{m}(z)\sqrt{z}=\text{constant}
-$$
+## 1. Error heat maps
 
-is treated as a classical scaling approximation for the purpose of this study.
+One combined heat map is generated for each seal configuration.
 
-It is based on a simplified treatment and does not by itself provide a complete description of compressible labyrinth-seal leakage.
+The heat map combines the two inlet conditions in a single matrix:
 
-Therefore, the analysis is intended to quantify how closely the relation reproduces the CFD results for the investigated geometries rather than treating the relation as a complete validation model for the CFD simulations.
+```text
+                 Non-swirl
+              ┌─────────────
+              │  upper-right
+              │
+              │
+       ───────┼─────────────
+              │
+              │  lower-left
+              │
+              └─────────────
+                 Swirl
+```
+
+Specifically:
+
+* the **upper-right triangle** contains the percentage errors for the non-swirl cases;
+* the **lower-left triangle** contains the percentage errors for the swirl cases;
+* the diagonal is left empty because comparing a fin count with itself is meaningless.
+
+This allows the effect of inlet swirl on the scaling-law accuracy to be compared directly for the same seal configuration.
+
+One heat map is generated for each of the five configurations.
 
 ---
 
-# 7. Complete Workflow
+## 2. Mass-flow trend plots
 
-The intended workflow is:
+A trend plot is generated for each configuration showing:
 
-### Step 1 — Generate and submit the CFD cases
+* CFD mass flow without swirl;
+* CFD mass flow with swirl;
+* the corresponding theoretical \(1/\sqrt{z}\) scaling curves.
 
-Run:
+The theoretical curve is anchored at the smallest available fin count for each variant.
 
-```bash
-./run_study.sh
+This provides a direct visual comparison between the CFD results and the expected scaling behaviour.
+
+---
+
+## 3. Summary comparison
+
+A combined bar chart summarizes the **mean absolute percentage error** for all five configurations.
+
+For every configuration, the mean error is shown separately for:
+
+* no swirl;
+* swirl.
+
+This provides an overall comparison of how well the scaling relation represents the CFD results across the different seal geometries and inlet conditions.
+
+---
+
+# Output Structure
+
+The analysis output directory contains:
+
+```text
+eq23_results/
+├── eq23_report_<case>.txt
+├── eq23_heatmap_<case>.pdf
+├── eq23_trend_<case>.pdf
+└── eq23_summary_comparison.pdf
 ```
 
-This generates the geometry and TRACE cases for the complete parametric study and submits them to the HPC system.
+The text reports contain the individual mass-flow values, pairwise comparisons, predicted values, absolute differences, percentage errors, and summary statistics.
 
-### Step 2 — Wait for the CFD simulations to finish
+The PDF files contain the graphical analysis described above.
 
-The TRACE simulations produce the raw CFD results for all completed cases.
+---
 
-### Step 3 — Extract the CFD results
+# Important Interpretation Note
 
-The result-extraction stage reads the completed simulation results and obtains the relevant `MassFlow` values.
+The fin-count scaling relation should be interpreted as a **scaling approximation**, rather than as a complete physical model of labyrinth-seal leakage.
 
-The extracted results are stored as YAML files in the configured values directory.
+The purpose of this analysis is therefore to quantify **how well the scaling relation represents the CFD results for the studied geometries and flow conditions**.
 
-### Step 4 — Analyze the YAML results
+It should not be interpreted as a standalone validation of the equation for general labyrinth-seal design.
 
-Run:
+---
+
+# Relationship Between the Scripts
+
+The three scripts have distinct purposes:
+
+| Stage | Purpose                                         | Main input                            | Main output                                      |
+| ----- | ----------------------------------------------- | ------------------------------------- | ------------------------------------------------ |
+| **2** | Generate and submit CFD cases                   | Study parameters                      | TRACE simulations                                |
+| **1** | Extract and verify simulation data              | Completed TRACE/post-processing files | Mass-flow verification report / processed values |
+| **3** | Analyze scaling behaviour and visualize results | `values_*.yml` files                  | Reports, heat maps, trend plots, summary plot    |
+
+The key point is that **Script 3 does not independently retrieve the CFD results from the simulations**. It works on the processed YAML data.
+
+Likewise, the actual CFD post-processing is separate from these scripts and is handled through the **`validation` folder** of the GitHub repository.
+
+---
+
+# Usage
+
+The general workflow is:
+
+### Step 1 — Run the simulation pipeline
+
+Run **Script 2** to generate and submit the required TRACE simulations.
+
+Wait for the required cases to finish.
+
+### Step 2 — Process and verify the results
+
+Run **Script 1** to read the completed simulation/post-processing files and extract/check the relevant mass-flow quantities.
+
+### Step 3 — Generate the analysis
+
+Run **Script 3**:
 
 ```bash
 python laby_eq23_check.py
 ```
 
-The script reads the YAML files and generates the numerical reports and plots.
-
-The final workflow is therefore:
-
-```text
-                 ┌─────────────────────┐
-                 │   run_study.sh      │
-                 │                     │
-                 │ Geometry + TRACE    │
-                 │ case generation     │
-                 └──────────┬──────────┘
-                            │
-                            ▼
-                 ┌─────────────────────┐
-                 │   TRACE CFD runs    │
-                 └──────────┬──────────┘
-                            │
-                            ▼
-                 ┌─────────────────────┐
-                 │ Result extraction   │
-                 │                     │
-                 │ MassFlow → YAML     │
-                 └──────────┬──────────┘
-                            │
-                            ▼
-                 ┌─────────────────────┐
-                 │ laby_eq23_check.py  │
-                 │                     │
-                 │ Analysis + plots    │
-                 └──────────┬──────────┘
-                            │
-                            ▼
-                 ┌─────────────────────┐
-                 │ Final results       │
-                 │                     │
-                 │ Reports             │
-                 │ Heatmaps            │
-                 │ Trend plots         │
-                 │ Summary plots       │
-                 └─────────────────────┘
-```
+The script reads the `values_*.yml` files and generates the reports and figures in the configured output directory.
 
 ---
 
-# 8. Directory Structure
+# Configuration
 
-A simplified representation of the workflow is:
+The main paths, studied configurations, fin-count range, averaging method, and plot settings are defined in the configuration section of the analysis script.
 
-```text
-project/
-│
-├── run_study.sh
-├── laby_eq23_check.py
-│
-├── geometry.yml
-├── TRACE_entry.input
-│
-└── results/
-    │
-    └── values/
-        └── fins/
-            ├── values_FS_F2.yml
-            ├── values_FS_F3.yml
-            ├── ...
-            ├── values_FD_F9.yml
-            ├── values_sFS_F2.yml
-            ├── values_sFS_F3.yml
-            └── ...
+For example:
+
+```python
+VALUES_DIR = Path("./data/fins")
+OUT_DIR = VALUES_DIR / "eq23_results"
 ```
 
-The exact directory structure depends on the DLR/HPC environment and the paths configured in the scripts.
+The default averaging block used for the mass-flow analysis is:
+
+```python
+DEFAULT_AVG = "mass"
+```
+
+The fin-count range is:
+
+```python
+MIN_FIN = 2
+MAX_FIN = 9
+```
+
+These settings can be changed directly in the configuration section when applying the workflow to a different dataset.
 
 ---
 
-# 9. Requirements
+# Repository Structure
 
-The CFD generation stage requires the DLR software environment used by the scripts, including:
+A simplified view of the repository is:
 
-* TRACE
-* GMC
-* PyMesh
-* Tecplot
-* GCC and the corresponding TRACE dependencies
-* Slurm/HPC access
+```text
+repository/
+│
+├── simulation/
+│   └── <simulation automation scripts>
+│
+├── validation/
+│   └── <CFD post-processing workflow>
+│
+├── analysis/
+│   └── <scaling-law analysis scripts>
+│
+└── README.md
+```
 
-The final analysis script requires Python with the libraries used by the script for:
+The exact folder organization may differ depending on the repository version, but the functional separation remains:
 
-* YAML/data parsing
-* Numerical processing
-* Plot generation
-
-The paths defined at the beginning of the scripts are specific to the original computing environment and should be adjusted when moving the workflow to another system.
+**simulation → post-processing → extraction/verification → analysis/visualization**
 
 ---
 
-# 10. Summary
+# Summary
 
-The repository implements a complete parametric CFD workflow:
+This pipeline was developed to automate the study of labyrinth-seal mass-flow scaling with fin count.
 
-```text
-Parameter sweep
-      ↓
-Geometry generation
-      ↓
-TRACE CFD simulations
-      ↓
-Mass-flow extraction
-      ↓
-YAML result files
-      ↓
-Eq. 2.3 comparison
-      ↓
-Error analysis
-      ↓
-Plots and reports
-```
+The workflow separates the computational stages so that the CFD simulations, CFD post-processing, numerical verification, and final visualization remain distinct.
 
-The purpose of the workflow is to quantify the relationship between **labyrinth-seal fin count and leakage mass flow** and to assess how accurately the classical fin-count scaling relation represents the CFD results for different step-height configurations and swirl conditions.
-"""
+The central analysis evaluates the approximation
 
-path = Path("/mnt/data/README.md")
-path.write_text(readme, encoding="utf-8")
-print(path)
-print(len(readme.splitlines()), "lines")
-print(readme[:300])
+$$
+\boxed{
+\dot{m}(z_2)
+=
+\dot{m}(z_1)
+\sqrt{\frac{z_1}{z_2}}
+}
+$$
+
+against CFD results for five seal configurations, with and without prescribed inlet swirl.
+
+The resulting reports and figures quantify the accuracy of this scaling relation across fin count, seal geometry, and inlet-swirl condition.
