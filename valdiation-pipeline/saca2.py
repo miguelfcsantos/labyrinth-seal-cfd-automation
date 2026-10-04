@@ -22,7 +22,7 @@ The conv/div folder is determined automatically by reading geometry_used.yml:
 
 Usage:
     python3 saca2.py                                          # batch: all sims in MERGED_BASE
-    python3 saca2.py /localdata1/corr_mi/OI/TEST/merge_done/LC  # single sim
+    python3 saca2.py /your/path/local/merge_done/LC           # single sim
 """
 
 import os
@@ -33,13 +33,13 @@ import subprocess
 # ---------------------------------------------------------------------------
 # Configuration
 # ---------------------------------------------------------------------------
-MERGED_BASE    = "/localdata1/corr_mi/OI/TEST/merge_done"
-PLOTS_BASE     = "/localdata1/corr_mi/PLOTS_DENECKE"
+MERGED_BASE    = "/your/path/local/merge_done"
+PLOTS_BASE     = "/your/path/PLOTS"
 INPUT_FILE     = "output/output/POST/d1_spanwise_primitives_flux.dat"
 GEOMETRY_FILE  = "geometry_used.yml"
 PARAMETERS_FILE = "parameters_used.yml"
 
-PLOT_SCRIPT    = "/localdata1/corr_mi/PLOTS_DENECKE/plot_velocity_profiles.py"
+PLOT_SCRIPT    = "/your/path/PLOTS/plot_velocity_profiles.py"
 
 # Normalisation: C = V / (RADIUS * OMEGA)
 RADIUS = 0.257                # [m]
