@@ -1,4 +1,4 @@
-# Labyrinth Seal CFD Sweep Pipeline
+# Labyrinth Seal CFD Parametric Study Pipeline
 
 This document explains how the four scripts fit together into one pipeline for running, finalizing, and post-processing parametric CFD sweeps of the staggered-labyrinth-seal case on the `cara` HPC cluster.
 
