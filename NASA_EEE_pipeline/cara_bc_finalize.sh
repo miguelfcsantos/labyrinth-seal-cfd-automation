@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# cara_bc_finalize.sh
+# bc_finalize.sh
 # -----------------------------------------------------------------------
 # Boundary-controller (BC) case finalizer.
 #
@@ -70,14 +70,14 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # -------------------------------------------------------------------
 # Environment / path configuration.
 # -------------------------------------------------------------------
-WORKDIR="/localdata1/testcases/staggered-labyrinth-seal_new/examples/Denecke_cavity"
-BASECASE="/localdata1/testcases/staggered-labyrinth-seal_new/lab_altered_py"
-LOCAL_SIMS_BASE="/home/corr_mi/Projects/MM/testGEO"
-REMOTE_SIMS_BASE="/scratch/ws25/corr_mi-mig_param_fac/PR_sims"
-TRACESTART_SCRIPT="/scratch/ws25/corr_mi-mig_param_fac/tracestart_OG.sh"
+WORKDIR="/path/to/testcase"
+BASECASE="/path/to/geometry_generator"
+LOCAL_SIMS_BASE="/path/to/local/sims"
+REMOTE_SIMS_BASE="/path/to/hpc/scratch/sims"
+TRACESTART_SCRIPT="/path/to/hpc/scripts/tracestart.sh"
 
-HPC_USER="corr_mi"
-HPC_HOST="cara.dlr.de"
+HPC_USER="your_username"
+HPC_HOST="hpc.example.com"
 REMOTE_SIMS_BC_DONE="${REMOTE_SIMS_BASE}_bc_done"   # archive for harvested _BC folders
 
 # -------------------------------------------------------------------
@@ -147,8 +147,8 @@ run_case() {
 
     prep.py -clb -cgns TRACE.cgns -np 128 -sb TRACE_split.cgns splitScript.jou mergeScript.jou
     gmcPlay splitScript.jou
-    gmcPlay /home/corr_mi/Projects/MM/conv_gmc.jou
-    gmcPlay /home/corr_mi/Projects/MM/models/OmegaSST_Off_Bardina.jou
+    gmcPlay /path/to/conv_gmc.jou
+    gmcPlay /path/to/models/OmegaSST_Off_Bardina.jou
     cd "$WORKDIR"
     return 0
 }
@@ -171,12 +171,12 @@ ship_and_submit() {
         return 1
     fi
 
-    if ! scp -r "$outdir" "cara.dlr.de:${remote_group_dir}/"; then
+    if ! scp -r "$outdir" "${HPC_HOST}:${remote_group_dir}/"; then
         echo "ERROR: scp failed for $case_name -- leaving local copy at $outdir, not submitting."
         return 1
     fi
 
-    ssh cara.dlr.de "sbatch --chdir=${remote_group_dir}/${case_name}/input $TRACESTART_SCRIPT"
+    ssh "${HPC_HOST}" "sbatch --chdir=${remote_group_dir}/${case_name}/input $TRACESTART_SCRIPT"
     echo "Submitted: ${remote_group_dir}/${case_name}"
 
     rm -rf "$outdir"
@@ -221,7 +221,7 @@ BC_DAT_REL="output/residual/bcControl_v.dat"
 MARKER="___FILE_BOUNDARY___"
 
 # How often to re-poll the HPC, in seconds. Override with e.g.
-#   POLL_INTERVAL_SECONDS=120 ./cara_bc_finalize.sh
+#   POLL_INTERVAL_SECONDS=120 ./bc_finalize.sh
 POLL_INTERVAL_SECONDS="${POLL_INTERVAL_SECONDS:-300}"
 
 # Pass --once to do a single pass and exit instead of looping forever.
