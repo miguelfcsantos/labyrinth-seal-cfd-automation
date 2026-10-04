@@ -3,7 +3,7 @@
 Automatic grid generator for POST — single simulation.
 
 Usage:
-    python3 griddd_single.py /localdata1/corr_mi/OI/sims/LC
+    python3 griddd_single.py /your/path/local/sims/LC
 
 Reads parameters_used.yml and geometry_used.yml from the sim folder,
 computes the grid, and writes grid.dat into the sim folder root.
@@ -26,7 +26,7 @@ DELTA_R = 0.0005
 N_R_BASELINE   = 41
 RATIO_BASELINE = 0.2613 / 0.256
 
-REF_DAT = "/localdata1/corr_mi/post_files/linesHubAndTipAsIJK.dat"
+REF_DAT = "/your/path/post_files/linesHubAndTipAsIJK.dat"
 
 
 # ---------------------------------------------------------------------------
@@ -61,7 +61,7 @@ def compute_r_limits(r_rotor_base, fin_height, clearance, step_heights):
 def main():
     if len(sys.argv) != 2:
         print(f"Usage: python3 {sys.argv[0]} <sim_folder_path>")
-        print(f"Example: python3 {sys.argv[0]} /localdata1/corr_mi/OI/sims/LC")
+        print(f"Example: python3 {sys.argv[0]} /your/path/local/sims/LC")
         sys.exit(1)
 
     sim_dir = os.path.abspath(sys.argv[1])
