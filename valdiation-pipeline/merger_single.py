@@ -3,7 +3,7 @@
 Post-processing pipeline for a SINGLE TRACE CFD simulation.
 
 Usage:
-    python3 merger_single.py /localdata1/corr_mi/OI/sims/LC
+    python3 merger_single.py /your/path/local/sims/LC
 
 Steps:
   1. Prepares mergeScript.jou in the case's output/cgns folder
@@ -21,8 +21,8 @@ import logging
 # ---------------------------------------------------------------------------
 # Configuration
 # ---------------------------------------------------------------------------
-DONE_DIR  = "/localdata1/corr_mi/OI/TEST/merge_done"
-POST_GMC  = "/home/corr_mi/gmcReadyForPost.jou"
+DONE_DIR  = "/your/path/local/merge_done"
+POST_GMC  = "/your/path/gmcReadyForPost.jou"
 LMOD_CMD  = "/usr/share/lmod/lmod/libexec/lmod"
 
 MODULES_GMC   = ["gmc/9.6.13"]
@@ -31,8 +31,8 @@ MODULES_TRACE = ["trace_suite/9.8.0-double"]
 POST_NP       = 24
 POST_CGNS_IN  = "TRACE_merged_post.cgns"
 POST_CGNS_OUT = "../post/POSTq.cgns"
-CUTS_XI       = "/localdata1/corr_mi/post_files/cutsXi.dat"
-BANDS         = "/localdata1/corr_mi/post_files/bands.dat"
+CUTS_XI       = "/your/path/post_files/cutsXi.dat"
+BANDS         = "/your/path/post_files/bands.dat"
 
 # ---------------------------------------------------------------------------
 # Logging
@@ -132,7 +132,7 @@ def process_case(case_dir):
 def main():
     if len(sys.argv) != 2:
         print(f"Usage: python3 {sys.argv[0]} <sim_folder_path>")
-        print(f"Example: python3 {sys.argv[0]} /localdata1/corr_mi/OI/sims/LC")
+        print(f"Example: python3 {sys.argv[0]} /your/path/local/sims/LC")
         sys.exit(1)
 
     case_dir = sys.argv[1]
