@@ -216,7 +216,7 @@ The purpose of this analysis is to quantify **how well the scaling relation repr
 | **2** | Extract and verify simulation data              | Completed TRACE/post-processing files | Mass-flow verification report / processed values  |
 | **3** | Analyze scaling behaviour and visualize results | `values_*.yml` files                  | Reports, heat maps, trend plots, summary plot     |
 
-Stage 3 does **not** retrieve CFD results from the simulations itself; it works on the processed YAML data. The CFD post-processing is handled separately by the [`validation/`](validation/) workflow.
+Stage 3 does **not** retrieve CFD results from the simulations itself; it works on the processed YAML data. The CFD post-processing is handled separately by the [`validation/`](../../../tree/main/valdiation-pipeline) workflow.
 
 ### Step 1: Run the simulation pipeline
 
@@ -224,7 +224,7 @@ Run the **Stage 1** script to generate and submit the TRACE simulations, then wa
 
 ### Step 2: Post-process, extract, and verify
 
-Run the post-processing workflow in [`validation/`](validation/), then run the **Stage 2** script to read the completed files and check the relevant mass-flow quantities.
+Run the post-processing workflow in [`validation/`](../../../tree/main/valdiation-pipeline), then run the **Stage 2** script to read the completed files and check the relevant mass-flow quantities.
 
 ### Step 3: Generate the analysis
 
