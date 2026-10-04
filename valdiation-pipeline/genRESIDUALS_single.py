@@ -3,9 +3,9 @@
 Residual macro generator for a SINGLE simulation.
 
 Usage:
-    python3 genRESIDUALS_single.py /localdata1/corr_mi/OI/sims/LC
+    python3 genRESIDUALS_single.py /your/path/local/sims/LC
 
-Generates residual_ALL.mcr in /localdata1/corr_mi/MACROS/RESIDUALS/
+Generates residual_ALL.mcr in /your/path/MACROS/RESIDUALS/
 then runs Tecplot in mesa (headless) mode to produce the PNG plots.
 """
 
@@ -16,7 +16,7 @@ import subprocess
 # ---------------------------------------------------------------------------
 # Configuration
 # ---------------------------------------------------------------------------
-MACRO_OUTDIR = "/localdata1/corr_mi/MACROS/RESIDUALS"
+MACRO_OUTDIR = "/your/path/MACROS/RESIDUALS"
 
 VAR_NAMES_RESIDUAL = (
     '"TimeStep" "SimulationDuration" "ResidualL1" "ResidualMax" "BlockIndex" '
@@ -218,7 +218,7 @@ def build_macro(sim_name, merged_base):
 def main():
     if len(sys.argv) != 2:
         print(f"Usage: python3 {sys.argv[0]} <sim_folder_path>")
-        print(f"Example: python3 {sys.argv[0]} /localdata1/corr_mi/OI/sims/LC")
+        print(f"Example: python3 {sys.argv[0]} /your/path/local/sims/LC")
         sys.exit(1)
 
     sim_path = os.path.abspath(sys.argv[1])
