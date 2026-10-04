@@ -116,13 +116,7 @@ Paths, host names and module names are defined at the top of each script and nee
 
 ---
 
-## Notes and limitations
 
-- Scripts were developed for a specific workstation and cluster setup. Expect to adjust paths, modules and the scheduler script before running them elsewhere.
-- Several analyses depend on values typed in by hand (for example the mesh cell counts in the GCI script). Check these whenever a case definition changes.
-- CFD post-processing is intentionally kept separate from the verification scripts: the GCI and Stodola studies assume the `values_*.yml` files already exist.
-
----
 
 ## References
 
