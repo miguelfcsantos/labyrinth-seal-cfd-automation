@@ -1,6 +1,5 @@
 #!/bin/bash
 #
-# bc_finalize.sh
 # -----------------------------------------------------------------------
 # Boundary-controller (BC) case finalizer.
 #
