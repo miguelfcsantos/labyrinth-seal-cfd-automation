@@ -13,20 +13,19 @@ The repository is available on **GitHub**.
 The complete workflow is executed in the following order:
 
 ```text
-2. Run simulations
+ Run simulations
         ↓
-1. Extract and verify simulation results
+ Extract and verify simulation results
         ↓
-3. Analyze results and generate plots
+ Analyze results and generate plots
 ```
 
-The scripts are therefore intended to be used in the order **2 → 1 → 3**.
 
 ### Important: CFD post-processing
 
 The CFD post-processing itself is **not performed by these scripts**.
 
-The required CFD quantities are generated using the post-processing workflow contained in the **`validation` folder of the GitHub repository**. The automation pipeline described here operates on the resulting simulation/post-processing data.
+The required CFD quantities are generated using the post-processing workflow contained in the **`validation` folder of the GitHub repository** (../../../tree/main/valdiation-pipeline). The automation pipeline described here operates on the resulting simulation/post-processing data.
 
 In other words:
 
