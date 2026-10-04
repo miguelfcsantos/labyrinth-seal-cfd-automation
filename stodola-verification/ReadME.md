@@ -1,4 +1,4 @@
-# Labyrinth Seal Fin-Count Scaling Study
+# Stodola Equation Verification Study
 
 This repository contains the automation and analysis pipeline used for the labyrinth-seal fin-count scaling study.
 
