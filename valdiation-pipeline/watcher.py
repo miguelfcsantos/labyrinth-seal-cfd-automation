@@ -21,15 +21,15 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 # CONFIGURATION
 # ---------------------------------------------------------------------------
 
-HPC_USER     = "corr_mi"
-HPC_HOST     = "cara.dlr.de"
-HPC_SIMS     = "/scratch/ws25/corr_mi-den_mig/sims"
-HPC_SIMS_DONE = "/scratch/ws25/corr_mi-den_mig/sims_done"        # moved here after download
+HPC_USER     = "your_username"
+HPC_HOST     = "your.hpc.host"
+HPC_SIMS     = "/your/path/hpc/sims"
+HPC_SIMS_DONE = "/your/path/hpc/sims_done"        # moved here after download
 
-LOCAL_STAGING = "/localdata1/corr_mi/OI/TEST/staging"            # incomplete downloads land here
-LOCAL_SIMS    = "/localdata1/corr_mi/OI/TEST/sims"               # merger.py / autoPost reads from here
+LOCAL_STAGING = "/your/path/local/staging"        # incomplete downloads land here
+LOCAL_SIMS    = "/your/path/local/sims"           # merger.py / autoPost reads from here
 
-AUTOPOST      = "/home/corr_mi/singleAutoPost.sh"                 # your post-processing script
+AUTOPOST      = "/your/path/singleAutoPost.sh"    # your post-processing script
 
 POLL_INTERVAL = 300   # seconds between checks
 MAX_PARALLEL  = 6     # how many sims to download simultaneously
