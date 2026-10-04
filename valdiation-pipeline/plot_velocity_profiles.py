@@ -2,7 +2,7 @@
 """
 plot_velocity_profiles.py
 ─────────────────────────
-Fully automatic plotting script for CARA-o PLOTS_DENECKE velocity profiles.
+Fully automatic plotting script for CARA-o PLOTS velocity profiles.
 No user interaction required — run it after saca.py and it discovers
 everything from the folder structure saca wrote.
 
@@ -42,7 +42,7 @@ import matplotlib.ticker as ticker
 from scipy.interpolate import make_interp_spline
 
 # ── Configuration ─────────────────────────────────────────────────────────
-BASE            = "/localdata1/corr_mi/PLOTS_DENECKE"
+BASE            = "/your/path/PLOTS"
 LOCATIONS_BASE  = os.path.join(BASE, "LOCATIONS")
 PLOTS_BASE      = os.path.join(BASE, "PLOTS")
 
